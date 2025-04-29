@@ -172,3 +172,9 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
+/resources/api_keys/
+/test/
+/models/lora/old/
+/models/lora/
+/models/lora/
+/models/lora/
