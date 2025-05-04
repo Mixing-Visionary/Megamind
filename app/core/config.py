@@ -13,13 +13,13 @@ class Settings(BaseSettings):
     ALLOW_ORIGINS: List[str] = ["*"]
 
     # Model Settings
-    BASE_MODEL_PATH: str = "stable-diffusion-v1-5/stable-diffusion-v1-5"  # "models/base_model/base_model.safetensors"
+    BASE_MODEL_PATH: str = "stabilityai/sd-turbo"  # "models/base_model/base_model.safetensors"
     LORA_MODELS_DIR: str = "models/lora/"
     LORA_STYLES: List[str] = ["cyberpunk", "anime", "ghibli", "noir", "gogh"]
 
     # Performance Optimizations
     ENABLE_MODEL_CPU_OFFLOAD: bool = True
-    ENABLE_ATTENTION_SLICING: bool = False
+    ENABLE_ATTENTION_SLICING: bool = True
     SAFETY_CHECKER: Optional[bool] = None
     WATERMARKS: Optional[bool] = None
     USE_HALF_PRECISION: bool = True
@@ -29,9 +29,9 @@ class Settings(BaseSettings):
     # Processing Settings
     DEFAULT_STRENGTH: float = 1
     DEFAULT_GUIDANCE_SCALE: float = 7.5
-    DEFAULT_STEPS: int = 20
+    DEFAULT_STEPS: int = 2
     DEFAULT_CONTROLNET_SCALE: float = 0.3
-    MAX_IMAGE_SIZE: int = 512  # Maximum dimension for input images
+    MAX_IMAGE_SIZE: int = 1024  # Maximum dimension for input images
 
     # Rate Limiting
     RATE_LIMIT_PER_MINUTE: int = 10

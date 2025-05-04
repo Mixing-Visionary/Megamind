@@ -23,10 +23,10 @@ processor = ImageProcessor()
 async def process_image(
         request: ImageProcessingRequest,
 ):
-    print(request.api_key)
     """Process an image using a selected style with the neural network"""
     validate_api_key(request.api_key)
-
+    if not request.strength:
+        request.strength = 0.5
     return await processor.process_image(request)
 
 
