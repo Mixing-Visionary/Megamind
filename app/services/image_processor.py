@@ -10,6 +10,7 @@ from fastapi import HTTPException
 from diffusers.utils import load_image
 
 from app.core.config import settings
+from app.models.enums import ProcessingStyle
 from app.models.schemas import ImageProcessingRequest, ImageProcessingResponse
 from app.services.model_loader import ModelLoader
 
@@ -22,7 +23,7 @@ class ImageProcessor:
     async def process_image(self, request: ImageProcessingRequest) -> ImageProcessingResponse:
         """Process an image with error handling and validation"""
         start_time = time.time()
-
+        style = ProcessingStyle(request.style)
         # Validate image data
         try:
             image_data = base64.b64decode(request.image)
@@ -46,30 +47,22 @@ class ImageProcessor:
         async with self._processing_lock:
             try:
                 # Load model (singleton pattern ensures efficient loading)
-                pipe, prompt_processor, prompt_model, canny_detector, upscaler = self.model_loader.load_base_model()
-                pipe = self.model_loader.set_lora_model(request.style.value)
+                pipe, prompt_processor, prompt_model = self.model_loader.load_base_model()
 
                 # Generating prompt
-                inputs = prompt_processor(init_image, return_tensors="pt")
-                out = prompt_model.generate(**inputs, max_new_tokens=100)
-                prompt = prompt_processor.decode(out[0], skip_special_tokens=True)
-                print(f"Prompt: {prompt}")
-                canny_image = canny_detector(
-                    init_image,
-                    low_threshold=100,
-                    high_threshold=300,
-                    image_resolution=min(init_image.size)
-                )
-                canny_image = canny_image.resize(init_image.size, Image.LANCZOS)
-                # canny_image = PIL.ImageOps.invert(canny_image)
-                canny_image.save('canny.jpeg')
-                print(init_image.size)
-                print(canny_image.size)
-                # Process image with proper error handling
-                result = await self._run_inference(pipe, init_image, request, prompt, canny_image)
-                result = upscaler(prompt=prompt, image=result, num_inference_steps=25).images[0]
+                inputs = prompt_processor(init_image, return_tensors="pt").to("cuda")
+                out = prompt_model.generate(**inputs)
+                caption = prompt_processor.decode(out[0], skip_special_tokens=True)
 
-                result = self._resize_image(result, max(init_size))
+                prompt = f"{caption}, {style.get_prompt()}"
+                negative = style.get_negative_prompt()
+                print(f"Prompt: {prompt}")
+                print(init_image.size)
+
+                # Process image with proper error handling
+                result = await self._run_inference(pipe, init_image, request, prompt, negative)
+                result = result.resize(init_size, Image.Resampling.LANCZOS)
+
                 # Encode result
                 buffered = BytesIO()
                 result.save(buffered, format="JPEG", quality=95)
@@ -92,7 +85,7 @@ class ImageProcessor:
                 print(f"Detailed error: {error_trace}")
                 raise HTTPException(status_code=500, detail=f"Image processing error: {str(e)}")
 
-    async def _run_inference(self, pipe, image, request, prompt, canny_image):
+    async def _run_inference(self, pipe, image, request, prompt, negative):
         """Run inference in a non-blocking way"""
         # Create a loop in a thread to run the model inference
         loop = asyncio.get_event_loop()
@@ -100,11 +93,10 @@ class ImageProcessor:
             None,
             lambda: pipe(
                 prompt=f"{request.style} style, {prompt}",
+                negative_prompt=negative,
                 image=image,
-                control_image=canny_image,
-                controlnet_conditioning_scale=settings.DEFAULT_CONTROLNET_SCALE,
                 strength=request.strength,
-                guidance_scale=settings.DEFAULT_GUIDANCE_SCALE,
+                guidance_scale=0,
                 num_inference_steps=settings.DEFAULT_STEPS
             ).images[0]
         )
