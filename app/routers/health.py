@@ -116,7 +116,7 @@ async def detailed_health(
         models.append(ModelStatus(
             model_type="base",
             is_loaded=base_model_loaded,
-            name=os.path.basename(settings.BASE_MODEL_PATH),
+            name=os.path.basename(settings.BASE_MODEL),
             device=model_loader.device if hasattr(model_loader, 'device') else "unknown",
             used_memory_mb=round(torch.cuda.memory_allocated() / (1024 ** 2), 2) if gpu_available else None
         ))
