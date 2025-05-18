@@ -11,7 +11,9 @@ class ProcessingStyle(str, Enum):
     GHIBLI = "ghibli"
     NOIR = "noir"
     GOGH = "gogh"
-
+    COMIX = "comix"
+    FLAT_COLOR = "flat_color"
+    POINTILISM = "pointilism"
 
     def get_path(self):
         base_dir = Path.cwd()
